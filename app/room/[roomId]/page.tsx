@@ -3,22 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 export default function Room() {
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isHost, setIsHost] = useState(false);
-  const [videoUrl, setVideoUrl] = useState(''); // URL or file path
+  const [videoUrl, setVideoUrl] = useState<string>(''); // Used for Video.js source
   const videoRef = useRef<HTMLVideoElement>(null);
   const webcamRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Player | null>(null);
-  const socketRef = useRef<any>(null);
+  const socketRef = useRef<Socket | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    socketRef.current = io('/api/socket');
+    socketRef.current = io('/api/socket', { transports: ['websocket'] });
 
     // Initialize Video.js
     if (videoRef.current && !playerRef.current) {
@@ -27,42 +27,43 @@ export default function Room() {
         autoplay: false,
         preload: 'auto',
         fluid: true,
+        sources: videoUrl ? [{ src: videoUrl, type: 'video/mp4' }] : [],
       });
 
       // Sync events from host
       playerRef.current.on('play', () => {
         if (isHost) {
-          socketRef.current.emit('video-event', {
+          socketRef.current?.emit('video-event', {
             roomId,
             event: 'play',
-            time: playerRef.current?.currentTime(),
+            time: playerRef.current?.currentTime() || 0,
           });
         }
       });
 
       playerRef.current.on('pause', () => {
         if (isHost) {
-          socketRef.current.emit('video-event', {
+          socketRef.current?.emit('video-event', {
             roomId,
             event: 'pause',
-            time: playerRef.current?.currentTime(),
+            time: playerRef.current?.currentTime() || 0,
           });
         }
       });
 
       playerRef.current.on('seeked', () => {
         if (isHost) {
-          socketRef.current.emit('video-event', {
+          socketRef.current?.emit('video-event', {
             roomId,
             event: 'seek',
-            time: playerRef.current?.currentTime(),
+            time: playerRef.current?.currentTime() || 0,
           });
         }
       });
     }
 
     // Socket events
-    socketRef.current.on('room-details', ({ roomName }) => {
+    socketRef.current.on('room-details', ({ roomName }: { roomName: string }) => {
       setRoomName(roomName);
     });
 
@@ -96,10 +97,10 @@ export default function Room() {
       }
     });
 
-    // Determine host (first user in room is host)
+    // Determine host
     socketRef.current.emit('join-room', roomId, Date.now().toString());
     socketRef.current.on('user-connected', () => {
-      if (!isHost) setIsHost(true); // First user becomes host
+      if (!isHost) setIsHost(true);
     });
 
     return () => {
@@ -110,7 +111,7 @@ export default function Room() {
       socketRef.current?.disconnect();
       localStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, [roomId, isHost]);
+  }, [roomId, isHost, videoUrl]);
 
   const toggleMute = () => {
     if (localStreamRef.current) {
@@ -120,14 +121,16 @@ export default function Room() {
     }
   };
 
+ рат
+
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value; // For simplicity, use a URL input
+    const url = e.target.value;
     if (isHost && url) {
       setVideoUrl(url);
       if (playerRef.current) {
         playerRef.current.src({ type: 'video/mp4', src: url });
       }
-      socketRef.current.emit('set-video', { roomId, url });
+      socketRef.current?.emit('set-video', { roomId, url });
     }
   };
 

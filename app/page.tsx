@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import Link from 'next/link';
 
 export default function Home() {
   const [roomName, setRoomName] = useState('');
   const [shortId, setShortId] = useState('');
   const [error, setError] = useState('');
-  const [socket, setSocket] = useState<any>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
     // Initialize Socket.IO connection
@@ -23,13 +23,13 @@ export default function Home() {
       setError('Failed to connect to server. Please try again.');
     });
 
-    socketInstance.on('room-created', ({ shortId, roomName }) => {
+    socketInstance.on('room-created', ({ shortId, roomName }: { shortId: string; roomName: string }) => {
       console.log('Room created:', { shortId, roomName });
       setShortId(shortId);
       setError('');
     });
 
-    socketInstance.on('error', (message) => {
+    socketInstance.on('error', (message: string) => {
       console.error('Server error:', message);
       setError(message);
     });
