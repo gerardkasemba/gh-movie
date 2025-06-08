@@ -1,12 +1,11 @@
 import { Server, Socket } from 'socket.io';
 import { nanoid } from 'nanoid';
-import { NextRequest } from 'next/server';
 
 // Store rooms and Socket.IO instance globally
 const rooms: { [key: string]: { name: string } } = {};
 let io: Server | null = null;
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Check if Socket.IO is already initialized
     if (!io) {
@@ -62,7 +61,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Optional: Export for other HTTP methods if needed
-export async function POST(req: NextRequest) {
+export async function POST() {
   return new Response('Method not allowed', { status: 405 });
 }
