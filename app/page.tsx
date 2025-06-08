@@ -10,8 +10,10 @@ export default function Home() {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    // Initialize Socket.IO connection
-    const socketInstance = io('/api/socket', { transports: ['websocket'] });
+    const socketInstance = io({
+      path: '/api/socket',
+      transports: ['websocket'],
+    });
     setSocket(socketInstance);
 
     socketInstance.on('connect', () => {

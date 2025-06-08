@@ -10,7 +10,7 @@ export default function Room() {
   const [roomName, setRoomName] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [isHost, setIsHost] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string>(''); // Used for Video.js source
+  const [videoUrl, setVideoUrl] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const webcamRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Player | null>(null);
@@ -18,9 +18,11 @@ export default function Room() {
   const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
-    socketRef.current = io('/api/socket', { transports: ['websocket'] });
+    socketRef.current = io({
+      path: '/api/socket',
+      transports: ['websocket'],
+    });
 
-    // Initialize Video.js
     if (videoRef.current && !playerRef.current) {
       playerRef.current = videojs(videoRef.current, {
         controls: true,
@@ -30,7 +32,6 @@ export default function Room() {
         sources: videoUrl ? [{ src: videoUrl, type: 'video/mp4' }] : [],
       });
 
-      // Sync events from host
       playerRef.current.on('play', () => {
         if (isHost) {
           socketRef.current?.emit('video-event', {
@@ -62,7 +63,6 @@ export default function Room() {
       });
     }
 
-    // Socket events
     socketRef.current.on('room-details', ({ roomName }: { roomName: string }) => {
       setRoomName(roomName);
     });
@@ -88,7 +88,6 @@ export default function Room() {
       }
     });
 
-    // Initialize webcam
     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
       localStreamRef.current = stream;
       if (webcamRef.current) {
@@ -97,7 +96,6 @@ export default function Room() {
       }
     });
 
-    // Determine host
     socketRef.current.emit('join-room', roomId, Date.now().toString());
     socketRef.current.on('user-connected', () => {
       if (!isHost) setIsHost(true);
@@ -120,8 +118,6 @@ export default function Room() {
       setIsMuted(!audioTrack.enabled);
     }
   };
-
- рат
 
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const url = e.target.value;
